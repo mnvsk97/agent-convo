@@ -112,6 +112,30 @@ def test_runner_uses_opening_then_target_and_grades(tmp_path: Path, monkeypatch)
     assert grade["result"] == "pass"
 
 
+def test_runner_emits_message_and_grade_events(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "agent_convo.runner.build_agent",
+        lambda *_args, **_kwargs: ScriptedAgent("tester"),
+    )
+    monkeypatch.setattr(
+        "agent_convo.runner.build_target_agent",
+        lambda *_args, **_kwargs: ScriptedAgent("target"),
+    )
+    events = []
+    config = load_config(write_config(tmp_path, max_turns=4), validate_paths=False)
+
+    asyncio.run(run_new(config, event_handler=events.append))
+
+    assert [(event["type"], event.get("agent")) for event in events] == [
+        ("message", "tester"),
+        ("message", "target"),
+        ("grade", None),
+    ]
+    assert events[0]["content"] == "Opening 1"
+    assert events[1]["content"] == "target-1"
+    assert events[2]["result"] == "pass"
+
+
 def test_parallel_run_creates_isolated_conversation_folders(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
         "agent_convo.runner.build_agent",

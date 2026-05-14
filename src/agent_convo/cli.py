@@ -17,6 +17,41 @@ from agent_convo.runner import resume_existing, run_new
 app = typer.Typer(no_args_is_help=True)
 
 
+def render_run_event(event: dict) -> None:
+    conversation_id = event.get("conversation_id", "run")
+    if event.get("type") == "message":
+        agent = str(event["agent"]).upper()
+        typer.echo(f"\n[{conversation_id}] {agent} turn {event['turn']}")
+        typer.echo(str(event["content"]).strip())
+        return
+    if event.get("type") == "grade":
+        result = str(event["result"]).upper()
+        typer.echo(f"\n[{conversation_id}] GRADER: {result}")
+        rationale = str(event.get("rationale") or "").strip()
+        if rationale:
+            typer.echo(rationale)
+
+
+def render_run_summary(run_dir: Path) -> None:
+    states: dict[str, int] = {}
+    grades: dict[str, int] = {}
+    conversations_dir = run_dir / "conversations"
+    for state_path in sorted(conversations_dir.glob("*/state.json")):
+        state = json.loads(state_path.read_text())
+        states[state["status"]] = states.get(state["status"], 0) + 1
+    for grade_path in sorted(conversations_dir.glob("*/grade.json")):
+        grade = json.loads(grade_path.read_text())
+        result = grade.get("result", "unknown")
+        grades[result] = grades.get(result, 0) + 1
+
+    typer.echo("\nRun summary")
+    typer.echo(f"run_dir: {run_dir}")
+    if states:
+        typer.echo("conversations: " + ", ".join(f"{key}={states[key]}" for key in sorted(states)))
+    if grades:
+        typer.echo("grades: " + ", ".join(f"{key}={grades[key]}" for key in sorted(grades)))
+
+
 @app.command()
 def init() -> None:
     example_path = Path("examples/tester_vs_target.yaml")
@@ -71,8 +106,8 @@ def run(
         per_turn_timeout_seconds=per_turn_timeout_seconds,
         max_retries_per_turn=max_retries_per_turn,
     )
-    run_dir = asyncio.run(run_new(config))
-    typer.echo(str(run_dir))
+    run_dir = asyncio.run(run_new(config, event_handler=render_run_event))
+    render_run_summary(run_dir)
     if evolve_tester_agent_flag:
         try:
             evolution_dir = evolve_tester_agent(config, run_dir=run_dir)
@@ -108,8 +143,8 @@ def resume(
         per_turn_timeout_seconds=per_turn_timeout_seconds,
         max_retries_per_turn=max_retries_per_turn,
     )
-    asyncio.run(resume_existing(config, run_dir))
-    typer.echo(f"Resumed {run_dir}")
+    asyncio.run(resume_existing(config, run_dir, event_handler=render_run_event))
+    render_run_summary(run_dir)
 
 
 @app.command("export")

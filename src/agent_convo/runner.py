@@ -6,7 +6,7 @@ import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from agent_convo.config import AppConfig, PersonaConfig, ScenarioConfig
 from agent_convo.evaluation import grade, observe
@@ -76,8 +76,14 @@ def messages_for_agent(
 
 
 class ConversationRunner:
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, event_handler: Callable[[dict[str, Any]], None] | None = None):
         self.config = config
+        self.event_handler = event_handler
+
+    def emit(self, event: dict[str, Any]) -> None:
+        if self.event_handler is None:
+            return
+        self.event_handler(event)
 
     async def start_run(self) -> Path:
         run_id = utc_now().replace(":", "").replace(".", "") + "-" + uuid.uuid4().hex[:8]
@@ -169,6 +175,7 @@ class ConversationRunner:
                 next_agent="target",
                 max_turns=case.scenario.max_turns,
             )
+            self.emit_message(convo_dir, case, transcript[-1])
             turn_index = 1
             next_agent = "target"
 
@@ -217,6 +224,7 @@ class ConversationRunner:
                         max_turns=case.scenario.max_turns,
                         attempt=attempt,
                     )
+                    self.emit_message(convo_dir, case, message)
                     append_jsonl(
                         convo_dir / "events.jsonl",
                         {
@@ -335,11 +343,42 @@ class ConversationRunner:
             },
         )
         write_transcript_views(convo_dir)
+        self.emit(
+            {
+                "type": "grade",
+                "conversation_id": convo_dir.name,
+                "persona_id": case.persona.id,
+                "persona_name": case.persona.name,
+                "scenario_id": case.scenario.id,
+                "scenario_goal": case.scenario.goal,
+                "result": result.result,
+                "rationale": result.rationale,
+            }
+        )
+
+    def emit_message(self, convo_dir: Path, case: ConversationCase, message: dict[str, Any]) -> None:
+        self.emit(
+            {
+                "type": "message",
+                "conversation_id": convo_dir.name,
+                "persona_id": case.persona.id,
+                "persona_name": case.persona.name,
+                "scenario_id": case.scenario.id,
+                "scenario_goal": case.scenario.goal,
+                "turn": message["turn"],
+                "agent": message["agent"],
+                "content": message["content"],
+            }
+        )
 
 
-async def run_new(config: AppConfig) -> Path:
-    return await ConversationRunner(config).start_run()
+async def run_new(config: AppConfig, event_handler: Callable[[dict[str, Any]], None] | None = None) -> Path:
+    return await ConversationRunner(config, event_handler=event_handler).start_run()
 
 
-async def resume_existing(config: AppConfig, run_dir: Path) -> None:
-    await ConversationRunner(config).resume_run(run_dir)
+async def resume_existing(
+    config: AppConfig,
+    run_dir: Path,
+    event_handler: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    await ConversationRunner(config, event_handler=event_handler).resume_run(run_dir)

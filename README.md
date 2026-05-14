@@ -28,6 +28,7 @@ agent-convo run examples/tester_vs_target.yaml
 ```
 
 The starter config uses deterministic `fake:` models, so it runs without provider keys.
+During a run, the CLI prints each tester message, each target response, the grader result, and a final run summary.
 
 ## How It Works
 
@@ -141,6 +142,24 @@ agent-convo run examples/tester_vs_target.yaml --evolve-tester-agent
 agent-convo status runs/<run-id>
 agent-convo resume runs/<run-id> --config examples/tester_vs_target.yaml
 agent-convo export runs/<run-id> --format jsonl --out conversations.jsonl
+```
+
+`run` and `resume` stream live progress to the terminal:
+
+```text
+[000001] TESTER turn 1
+We are a 12-person startup. What would this cost us monthly?
+
+[000001] TARGET turn 2
+The target response appears here.
+
+[000001] GRADER: PASS
+The grader rationale appears here.
+
+Run summary
+run_dir: runs/...
+conversations: completed=1
+grades: pass=1
 ```
 
 Run settings in YAML can be overridden at the CLI. CLI flags take precedence:
