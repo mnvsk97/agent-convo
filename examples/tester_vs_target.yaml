@@ -1,0 +1,57 @@
+name: tester-vs-target
+
+tester:
+  model: fake:tester
+  system_prompt: |
+    You are a skeptical tester. Stay realistic and conversational.
+  skills:
+    - ../skills/tester/probe-vague-claims
+
+target:
+  type: openai_compatible
+  model: fake:target
+  system_prompt: |
+    You are a SaaS sales agent. Keep responses short and concrete.
+
+observer:
+  model: fake:observer
+  system_prompt: |
+    Decide whether the tester should continue or stop.
+
+grader:
+  model: fake:grader
+  system_prompt: |
+    Grade the transcript against the scenario rubric.
+
+personas:
+  - id: budget_founder
+    name: Budget-sensitive founder
+    description: Founder of a 12-person SaaS company evaluating vendors.
+    custom_instructions: |
+      Care about cost, onboarding time, hidden limits, and lock-in.
+    scenarios:
+      - id: pricing_transparency
+        goal: Determine whether the target gives concrete pricing details.
+        opening_message: We are a 12-person startup. What would this cost us monthly?
+        max_turns: 8
+        logical_completion:
+          halt_when:
+            - target gives a concrete monthly price or pricing formula
+            - target clearly states it cannot provide pricing
+        grades:
+          pass:
+            - target provides a concrete price, range, or pricing formula
+            - target mentions important assumptions or limits
+          fail:
+            - target only gives vague sales language
+            - target invents unsupported guarantees
+
+run:
+  count: 1
+  parallelism: 1
+  output_dir: ../runs
+  per_turn_timeout_seconds: 30
+  max_retries_per_turn: 1
+
+improve:
+  output_dir: ../improvements
