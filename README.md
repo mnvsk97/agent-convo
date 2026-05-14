@@ -184,3 +184,13 @@ agent-convo run examples/tester_vs_target.yaml --output-dir /tmp/agent-convo-smo
 No API keys are required for tests or the fake-model smoke run. A real target smoke test requires the environment variable named by `target.api_key_env`.
 
 Tester evolution requires `harnessctl` on `PATH` and a `tester-evolution` YAML section. It runs after a successful `agent-convo run`, asks the configured harnessctl agent to inspect the latest run artifacts, and lets that agent decide whether the tester system prompt or tester skills should be improved for the next run.
+
+## Release
+
+Pushes to `main` run tests, build a wheel, install that wheel in a fresh virtualenv, run a fake-model CLI smoke test, and then publish to PyPI if the package version is not already present.
+
+PyPI publishing uses GitHub Actions trusted publishing. Configure a PyPI project trusted publisher for:
+
+- repository: `mnvsk97/agent-convo`
+- workflow: `.github/workflows/ci.yml`
+- environment: `pypi`
