@@ -63,7 +63,14 @@ def load_middleware(agent: AgentConfig) -> list[Any]:
     return [import_object(path) for path in agent.middleware]
 
 
-def model_from_config(model: str, agent_name: str) -> Any:
+def model_from_config(
+    model: str,
+    agent_name: str,
+    *,
+    base_url: str | None = None,
+    base_url_env: str | None = None,
+    api_key_env: str | None = None,
+) -> Any:
     if model.startswith("fake:"):
         label = model.split(":", 1)[1] or agent_name
         return FakeListChatModel(
@@ -73,12 +80,30 @@ def model_from_config(model: str, agent_name: str) -> Any:
                 f"{label} response: summarize the remaining uncertainty.",
             ]
         )
+    if base_url or base_url_env or api_key_env:
+        resolved_base_url = base_url
+        if base_url_env:
+            resolved_base_url = os.getenv(base_url_env)
+            if not resolved_base_url:
+                raise ValueError(f"{base_url_env} is required for {agent_name} model {model}")
+        kwargs: dict[str, Any] = {"model": model}
+        if resolved_base_url:
+            kwargs["base_url"] = resolved_base_url
+        if api_key_env:
+            api_key = os.getenv(api_key_env)
+            if not api_key:
+                raise ValueError(f"{api_key_env} is required for {agent_name} model {model}")
+            kwargs["api_key"] = api_key
+        return ChatOpenAI(**kwargs)
     return model
 
 
 def final_content(result: Any) -> str:
     if isinstance(result, str):
         return result
+    content = getattr(result, "content", None)
+    if isinstance(content, str):
+        return content
     if isinstance(result, dict) and result.get("messages"):
         message = result["messages"][-1]
         content = getattr(message, "content", None)
@@ -89,17 +114,13 @@ def final_content(result: Any) -> str:
 
 
 def target_model_from_config(target: TargetConfig) -> Any:
-    if target.model.startswith("fake:"):
-        return model_from_config(target.model, "target")
-    kwargs: dict[str, Any] = {"model": target.model}
-    if target.base_url:
-        kwargs["base_url"] = target.base_url
-    if target.api_key_env:
-        api_key = os.getenv(target.api_key_env)
-        if not api_key:
-            raise ValueError(f"{target.api_key_env} is required for target model {target.model}")
-        kwargs["api_key"] = api_key
-    return ChatOpenAI(**kwargs)
+    return model_from_config(
+        target.model,
+        "target",
+        base_url=target.base_url,
+        base_url_env=target.base_url_env,
+        api_key_env=target.api_key_env,
+    )
 
 
 def mcp_connections(servers: list[MCPServerConfig]) -> dict[str, dict[str, Any]]:
@@ -131,7 +152,13 @@ async def build_agent(
 ) -> Any:
     tools = [*load_tools(config), *(await load_mcp_tools(config))]
     return create_agent(
-        model=model_from_config(config.model, agent_name),
+        model=model_from_config(
+            config.model,
+            agent_name,
+            base_url=config.base_url,
+            base_url_env=config.base_url_env,
+            api_key_env=config.api_key_env,
+        ),
         tools=tools,
         system_prompt=compile_system_prompt(config, base_dir, persona=persona, scenario=scenario),
         middleware=load_middleware(config),

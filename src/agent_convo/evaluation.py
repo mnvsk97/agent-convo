@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any, Literal
 
-from langchain.agents import create_agent
 from pydantic import BaseModel
 
 from agent_convo.config import GraderConfig, ObserverConfig, PersonaConfig, ScenarioConfig
@@ -48,6 +48,44 @@ async def structured_invoke(agent: Any, prompt: str) -> Any:
     return json.loads(content)
 
 
+def parse_json_object(content: str) -> dict[str, Any]:
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+        if not match:
+            raise
+        return json.loads(match.group(0))
+
+
+async def invoke_json_model(
+    *,
+    model: str,
+    name: str,
+    system_prompt: str,
+    user_prompt: str,
+    base_url: str | None,
+    base_url_env: str | None,
+    api_key_env: str | None,
+) -> dict[str, Any]:
+    llm = model_from_config(
+        model,
+        name,
+        base_url=base_url,
+        base_url_env=base_url_env,
+        api_key_env=api_key_env,
+    )
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_prompt})
+    if hasattr(llm, "ainvoke"):
+        result = await llm.ainvoke(messages)
+    else:
+        result = await asyncio.to_thread(llm.invoke, messages)
+    return parse_json_object(final_content(result))
+
+
 async def observe(
     config: ObserverConfig,
     *,
@@ -65,16 +103,24 @@ async def observe(
             json.dumps(scenario.logical_completion.model_dump(), indent=2),
             "Transcript:",
             transcript_text(transcript),
-            "Decide whether to continue, halt_success, or halt_failure.",
+            (
+                'Return JSON only with shape: {"decision":"continue|halt_success|halt_failure",'
+                '"feedback":"short feedback for the tester"}'
+            ),
         ]
     )
-    agent = create_agent(
-        model=model_from_config(config.model, "observer"),
-        tools=[],
-        system_prompt=config.system_prompt,
-        response_format=ObserverDecision,
+    raw = await asyncio.wait_for(
+        invoke_json_model(
+            model=config.model,
+            name="observer",
+            system_prompt=config.system_prompt,
+            user_prompt=prompt,
+            base_url=config.base_url,
+            base_url_env=config.base_url_env,
+            api_key_env=config.api_key_env,
+        ),
+        timeout=60,
     )
-    raw = await asyncio.wait_for(structured_invoke(agent, prompt), timeout=60)
     return raw if isinstance(raw, ObserverDecision) else ObserverDecision.model_validate(raw)
 
 
@@ -95,14 +141,19 @@ async def grade(
             json.dumps(scenario.grades.model_dump(by_alias=True), indent=2),
             "Transcript:",
             transcript_text(transcript),
-            "Return pass or fail with concise evidence.",
+            'Return JSON only with shape: {"result":"pass|fail","rationale":"concise evidence"}.',
         ]
     )
-    agent = create_agent(
-        model=model_from_config(config.model, "grader"),
-        tools=[],
-        system_prompt=config.system_prompt,
-        response_format=GradeResult,
+    raw = await asyncio.wait_for(
+        invoke_json_model(
+            model=config.model,
+            name="grader",
+            system_prompt=config.system_prompt,
+            user_prompt=prompt,
+            base_url=config.base_url,
+            base_url_env=config.base_url_env,
+            api_key_env=config.api_key_env,
+        ),
+        timeout=60,
     )
-    raw = await asyncio.wait_for(structured_invoke(agent, prompt), timeout=60)
     return raw if isinstance(raw, GradeResult) else GradeResult.model_validate(raw)

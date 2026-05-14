@@ -18,6 +18,9 @@ class AgentConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model: str
+    base_url: str | None = None
+    base_url_env: str | None = None
+    api_key_env: str | None = None
     system_prompt: str = ""
     skills: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
@@ -27,14 +30,15 @@ class AgentConfig(BaseModel):
 
 class TargetConfig(AgentConfig):
     type: Literal["openai_compatible"] = "openai_compatible"
-    base_url: str | None = None
-    api_key_env: str | None = None
 
 
 class ObserverConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model: str = "fake:observer"
+    base_url: str | None = None
+    base_url_env: str | None = None
+    api_key_env: str | None = None
     system_prompt: str = ""
     check_after_each_target_turn: bool = True
 
@@ -43,6 +47,9 @@ class GraderConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model: str = "fake:grader"
+    base_url: str | None = None
+    base_url_env: str | None = None
+    api_key_env: str | None = None
     system_prompt: str = ""
 
 

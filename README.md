@@ -183,6 +183,13 @@ agent-convo run examples/tester_vs_target.yaml --output-dir /tmp/agent-convo-smo
 
 No API keys are required for tests or the fake-model smoke run. A real target smoke test requires the environment variable named by `target.api_key_env`.
 
+For TrueFoundry Gateway, copy `.env.example` to `.env`, set `TFY_LLM_GATEWAY_URL` to your gateway URL, set `TRUEFOUNDRY_API_KEY`, and run:
+
+```bash
+agent-convo doctor examples/tfy_gateway.yaml
+agent-convo run examples/tfy_gateway.yaml
+```
+
 Tester evolution requires `harnessctl` on `PATH` and a `tester-evolution` YAML section. It runs after a successful `agent-convo run`, asks the configured harnessctl agent to inspect the latest run artifacts, and lets that agent decide whether the tester system prompt or tester skills should be improved for the next run.
 
 ## Release
