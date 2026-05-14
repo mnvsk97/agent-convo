@@ -12,7 +12,6 @@ from agent_convo.config import dump_example_config, load_config
 from agent_convo.doctor import check_config
 from agent_convo.evolution import EvolutionNotConfiguredError, evolve_tester_agent
 from agent_convo.export import export_run
-from agent_convo.improve import improve_agent
 from agent_convo.runner import resume_existing, run_new
 
 app = typer.Typer(no_args_is_help=True)
@@ -122,16 +121,6 @@ def export_cmd(
     export_run(run_dir, fmt=fmt, out=out)
     typer.echo(str(out))
 
-
-@app.command()
-def improve(
-    run_dir: Annotated[Path, typer.Option("--run", exists=True)],
-    agent: Annotated[str, typer.Option("--agent")],
-    config_path: Annotated[Path, typer.Option("--config", "-c", exists=True)] = Path("examples/tester_vs_target.yaml"),
-) -> None:
-    config = load_config(config_path)
-    output_dir = improve_agent(config, run_dir=run_dir, agent_name=agent)
-    typer.echo(str(output_dir))
 
 if __name__ == "__main__":
     app()

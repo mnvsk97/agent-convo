@@ -60,6 +60,3 @@ run:
   output_dir: ../runs
   per_turn_timeout_seconds: 60
   max_retries_per_turn: 1
-
-improve:
-  output_dir: ../improvements

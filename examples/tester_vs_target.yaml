@@ -53,9 +53,6 @@ run:
   per_turn_timeout_seconds: 30
   max_retries_per_turn: 1
 
-improve:
-  output_dir: ../improvements
-
 tester-evolution:
   agent: codex
   output_dir: ../tester-evolution

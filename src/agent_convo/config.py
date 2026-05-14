@@ -97,12 +97,6 @@ class RunConfig(BaseModel):
     max_retries_per_turn: int = Field(default=2, ge=0)
 
 
-class ImproveConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    output_dir: str = "./improvements"
-
-
 class TesterEvolutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -124,7 +118,6 @@ class AppConfig(BaseModel):
     observer: ObserverConfig = Field(default_factory=ObserverConfig)
     grader: GraderConfig = Field(default_factory=GraderConfig)
     run: RunConfig = Field(default_factory=RunConfig)
-    improve: ImproveConfig = Field(default_factory=ImproveConfig)
     tester_evolution: TesterEvolutionConfig | None = Field(default=None, alias="tester-evolution")
     config_path: Path | None = Field(default=None, exclude=True)
 
@@ -237,9 +230,6 @@ run:
   output_dir: ../runs
   per_turn_timeout_seconds: 30
   max_retries_per_turn: 1
-
-improve:
-  output_dir: ../improvements
 
 tester-evolution:
   agent: codex

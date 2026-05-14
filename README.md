@@ -141,7 +141,6 @@ agent-convo run examples/tester_vs_target.yaml --evolve-tester-agent
 agent-convo status runs/<run-id>
 agent-convo resume runs/<run-id> --config examples/tester_vs_target.yaml
 agent-convo export runs/<run-id> --format jsonl --out conversations.jsonl
-agent-convo improve --agent tester --run runs/<run-id>
 ```
 
 Run settings in YAML can be overridden at the CLI. CLI flags take precedence:
