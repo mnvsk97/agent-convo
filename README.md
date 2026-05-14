@@ -47,6 +47,8 @@ transcript.md
 grade.json
 ```
 
+If `--evolve-tester-agent` is set, the harnessctl evolution prompt and result are written under the configured `tester-evolution.output_dir`.
+
 ## Config
 
 ```yaml
@@ -114,6 +116,14 @@ run:
   output_dir: ./runs
   per_turn_timeout_seconds: 90
   max_retries_per_turn: 2
+
+tester-evolution:
+  agent: codex
+  output_dir: ./tester-evolution
+  name: tester-evolution
+  budget: 2.0
+  extra_instructions: |
+    Keep changes small. Prefer improving the tester system prompt or reusable tester skills.
 ```
 
 The tester, observer, and grader use LangChain model strings. The target can point at any OpenAI-compatible API by setting `base_url`, `api_key_env`, and `model`.
@@ -127,6 +137,7 @@ agent-convo init
 agent-convo validate examples/tester_vs_target.yaml
 agent-convo doctor examples/tester_vs_target.yaml
 agent-convo run examples/tester_vs_target.yaml
+agent-convo run examples/tester_vs_target.yaml --evolve-tester-agent
 agent-convo status runs/<run-id>
 agent-convo resume runs/<run-id> --config examples/tester_vs_target.yaml
 agent-convo export runs/<run-id> --format jsonl --out conversations.jsonl
@@ -171,3 +182,5 @@ agent-convo run examples/tester_vs_target.yaml --output-dir /tmp/agent-convo-smo
 ```
 
 No API keys are required for tests or the fake-model smoke run. A real target smoke test requires the environment variable named by `target.api_key_env`.
+
+Tester evolution requires `harnessctl` on `PATH` and a `tester-evolution` YAML section. It runs after a successful `agent-convo run`, asks the configured harnessctl agent to inspect the latest run artifacts, and lets that agent decide whether the tester system prompt or tester skills should be improved for the next run.

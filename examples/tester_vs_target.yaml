@@ -55,3 +55,10 @@ run:
 
 improve:
   output_dir: ../improvements
+
+tester-evolution:
+  agent: codex
+  output_dir: ../tester-evolution
+  name: tester-evolution
+  extra_instructions: |
+    Keep changes small. Prefer improving the tester system prompt or reusable tester skills.

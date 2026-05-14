@@ -96,8 +96,19 @@ class ImproveConfig(BaseModel):
     output_dir: str = "./improvements"
 
 
-class AppConfig(BaseModel):
+class TesterEvolutionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    agent: str
+    output_dir: str = "./tester-evolution"
+    name: str = "agent-convo-tester-evolution"
+    budget: float | None = Field(default=None, gt=0)
+    stream: bool = False
+    extra_instructions: str = ""
+
+
+class AppConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     name: str
     tester: AgentConfig
@@ -107,6 +118,7 @@ class AppConfig(BaseModel):
     grader: GraderConfig = Field(default_factory=GraderConfig)
     run: RunConfig = Field(default_factory=RunConfig)
     improve: ImproveConfig = Field(default_factory=ImproveConfig)
+    tester_evolution: TesterEvolutionConfig | None = Field(default=None, alias="tester-evolution")
     config_path: Path | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
@@ -221,4 +233,11 @@ run:
 
 improve:
   output_dir: ../improvements
+
+tester-evolution:
+  agent: codex
+  output_dir: ../tester-evolution
+  name: tester-evolution
+  extra_instructions: |
+    Keep changes small. Prefer improving the tester system prompt or reusable tester skills.
 """

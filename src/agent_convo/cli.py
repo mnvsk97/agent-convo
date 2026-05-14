@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from agent_convo.config import dump_example_config, load_config
 from agent_convo.doctor import check_config
+from agent_convo.evolution import EvolutionNotConfiguredError, evolve_tester_agent
 from agent_convo.export import export_run
 from agent_convo.improve import improve_agent
 from agent_convo.runner import resume_existing, run_new
@@ -58,6 +59,10 @@ def run(
     output_dir: Annotated[Path | None, typer.Option("--output-dir")] = None,
     per_turn_timeout_seconds: Annotated[float | None, typer.Option("--per-turn-timeout-seconds")] = None,
     max_retries_per_turn: Annotated[int | None, typer.Option("--max-retries-per-turn")] = None,
+    evolve_tester_agent_flag: Annotated[
+        bool,
+        typer.Option("--evolve-tester-agent", help="Run tester evolution with harnessctl after the run finishes."),
+    ] = False,
 ) -> None:
     load_dotenv()
     config = load_config(config_path).with_run_overrides(
@@ -69,6 +74,12 @@ def run(
     )
     run_dir = asyncio.run(run_new(config))
     typer.echo(str(run_dir))
+    if evolve_tester_agent_flag:
+        try:
+            evolution_dir = evolve_tester_agent(config, run_dir=run_dir)
+        except EvolutionNotConfiguredError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        typer.echo(f"tester evolution: {evolution_dir}")
 
 
 @app.command()

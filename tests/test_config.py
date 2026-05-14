@@ -90,6 +90,23 @@ def test_config_accepts_mcp_servers(tmp_path: Path) -> None:
     assert config.tester.mcp_servers[0].name == "demo"
 
 
+def test_config_loads_tester_evolution_section(tmp_path: Path) -> None:
+    body = valid_body(tmp_path) + """
+tester-evolution:
+  agent: codex
+  output_dir: ./tester-evolution
+  name: evolve-tester
+  budget: 1.5
+  extra_instructions: Keep edits small.
+"""
+
+    config = load_config(write_config(tmp_path, body))
+
+    assert config.tester_evolution is not None
+    assert config.tester_evolution.agent == "codex"
+    assert config.tester_evolution.budget == 1.5
+
+
 def test_factory_compiles_prompt_with_skill_persona_and_scenario(tmp_path: Path) -> None:
     config = load_config(write_config(tmp_path, valid_body(tmp_path)))
     persona = config.personas[0]
