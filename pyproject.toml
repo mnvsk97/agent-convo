@@ -42,6 +42,10 @@ test = [
 [project.scripts]
 agent-convo = "agent_convo.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/mnvsk97/agent-convo"
+Issues = "https://github.com/mnvsk97/agent-convo/issues"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_convo"]
 
